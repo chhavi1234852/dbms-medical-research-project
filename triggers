@@ -1,0 +1,467 @@
+-- ============================================================
+-- MEDICAL RESEARCH PUBLICATION & CONFERENCE MANAGEMENT SYSTEM
+-- STEP 4: PL/SQL — TRIGGERS, PROCEDURES, CURSORS & FUNCTIONS
+-- UCS310 | Group 2C22 | Thapar Institute
+-- ============================================================
+
+
+-- ============================================================
+-- SECTION A: TRIGGERS
+-- ============================================================
+
+-- TRIGGER 1: Prevent Duplicate Submission
+-- Stops same paper being submitted to same conference twice
+
+DELIMITER $$
+
+CREATE TRIGGER prevent_duplicate_submission
+BEFORE INSERT ON Submission
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM Submission
+        WHERE paper_id = NEW.paper_id
+        AND   conf_id  = NEW.conf_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Duplicate submission not allowed for same conference';
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- Test Trigger 1: First insert (should succeed)
+INSERT INTO Submission VALUES (310, '2025-03-01', 'Submitted', 201, 501);
+
+-- Test Trigger 1: Second insert same paper + conference (should FAIL)
+INSERT INTO Submission VALUES (311, '2025-03-02', 'Submitted', 201, 501);
+
+
+-- ──────────────────────────────────────────────────────────────
+
+-- TRIGGER 2: Auto-set Submission Status to 'Under Review'
+-- If no status provided, default to 'Under Review'
+
+DELIMITER $$
+
+CREATE TRIGGER set_default_status
+BEFORE INSERT ON Submission
+FOR EACH ROW
+BEGIN
+    IF NEW.status IS NULL OR NEW.status = '' THEN
+        SET NEW.status = 'Under Review';
+    END IF;
+END$$
+
+DELIMITER ;
+
+
+-- ──────────────────────────────────────────────────────────────
+
+-- TRIGGER 3: Prevent Self-Citation
+-- A paper cannot cite itself
+
+DELIMITER $$
+
+CREATE TRIGGER prevent_self_citation
+BEFORE INSERT ON Citation
+FOR EACH ROW
+BEGIN
+    IF NEW.citing_paper_id = NEW.cited_paper_id THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'A paper cannot cite itself';
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- Test Trigger 3: Self citation (should FAIL)
+INSERT INTO Citation VALUES (201, 201, 2024);
+
+-- Test Trigger 3: Valid citation (should succeed)
+INSERT INTO Citation VALUES (203, 202, 2025);
+
+
+-- ============================================================
+-- SECTION B: STORED PROCEDURES
+-- ============================================================
+
+-- PROCEDURE 1: Submit a Research Paper
+DELIMITER $$
+
+CREATE PROCEDURE submit_paper(
+    IN sid   INT,
+    IN sdate DATE,
+    IN stat  VARCHAR(30),
+    IN pid   INT,
+    IN cid   INT
+)
+BEGIN
+    INSERT INTO Submission
+    VALUES (sid, sdate, stat, pid, cid);
+    SELECT CONCAT('Paper ', pid, ' successfully submitted to Conference ', cid) AS message;
+END$$
+
+DELIMITER ;
+
+-- Call Procedure 1
+CALL submit_paper(620, '2025-05-01', 'Submitted', 204, 502);
+
+
+-- ──────────────────────────────────────────────────────────────
+
+-- PROCEDURE 2: Withdraw a Submission
+DELIMITER $$
+
+CREATE PROCEDURE withdraw_submission(
+    IN sid INT
+)
+BEGIN
+    DELETE FROM Submission
+    WHERE submission_id = sid;
+    SELECT CONCAT('Submission ', sid, ' has been withdrawn') AS message;
+END$$
+
+DELIMITER ;
+
+-- Call Procedure 2
+CALL withdraw_submission(620);
+
+
+-- ──────────────────────────────────────────────────────────────
+
+-- PROCEDURE 3: Get All Papers by an Author
+DELIMITER $$
+
+CREATE PROCEDURE get_papers_by_author(
+    IN aid INT
+)
+BEGIN
+    SELECT rp.paper_id,
+           rp.title,
+           rp.publication_year,
+           rd.domain_name
+    FROM Author_Paper ap
+    JOIN Research_Paper  rp ON rp.paper_id  = ap.paper_id
+    JOIN Research_Domain rd ON rd.domain_id = rp.domain_id
+    WHERE ap.author_id = aid;
+END$$
+
+DELIMITER ;
+
+-- Call Procedure 3 for author 1
+CALL get_papers_by_author(1);
+
+
+-- ──────────────────────────────────────────────────────────────
+
+-- PROCEDURE 4: Get Review Summary for a Paper
+DELIMITER $$
+
+CREATE PROCEDURE get_review_summary(
+    IN pid INT
+)
+BEGIN
+    SELECT rv.name      AS reviewer_name,
+           r.rating,
+           r.comments,
+           rp.title     AS paper_title
+    FROM Review r
+    JOIN Reviewer       rv ON rv.reviewer_id = r.reviewer_id
+    JOIN Research_Paper rp ON rp.paper_id    = r.paper_id
+    WHERE r.paper_id = pid;
+END$$
+
+DELIMITER ;
+
+-- Call Procedure 4 for paper 201
+CALL get_review_summary(201);
+
+
+-- ──────────────────────────────────────────────────────────────
+
+-- PROCEDURE 5: Register Author for Conference
+DELIMITER $$
+
+CREATE PROCEDURE register_author(
+    IN rid   INT,
+    IN rdate DATE,
+    IN aid   INT,
+    IN cid   INT
+)
+BEGIN
+    INSERT INTO Registration VALUES (rid, rdate, aid, cid);
+    SELECT CONCAT('Author ', aid, ' registered for Conference ', cid) AS message;
+END$$
+
+DELIMITER ;
+
+-- Call Procedure 5
+CALL register_author(710, '2025-03-10', 4, 501);
+
+
+-- ============================================================
+-- SECTION C: FUNCTIONS
+-- ============================================================
+
+-- FUNCTION 1: Get Total Citation Count for a Paper
+-- Returns how many times a paper has been cited
+
+DELIMITER $$
+
+CREATE FUNCTION get_citation_count(pid INT)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total INT;
+    SELECT COUNT(*) INTO total
+    FROM Citation
+    WHERE cited_paper_id = pid;
+    RETURN total;
+END$$
+
+DELIMITER ;
+
+-- Call Function 1
+SELECT get_citation_count(201) AS citation_count_for_paper_201;
+SELECT get_citation_count(202) AS citation_count_for_paper_202;
+
+
+-- ──────────────────────────────────────────────────────────────
+
+-- FUNCTION 2: Get Average Rating for a Paper
+-- Returns average review rating for a given paper
+
+DELIMITER $$
+
+CREATE FUNCTION get_avg_rating(pid INT)
+RETURNS DECIMAL(4,2)
+DETERMINISTIC
+BEGIN
+    DECLARE avg_rating DECIMAL(4,2);
+    SELECT AVG(rating) INTO avg_rating
+    FROM Review
+    WHERE paper_id = pid;
+    RETURN avg_rating;
+END$$
+
+DELIMITER ;
+
+-- Call Function 2
+SELECT get_avg_rating(201) AS avg_rating_paper_201;
+SELECT get_avg_rating(202) AS avg_rating_paper_202;
+
+
+-- ──────────────────────────────────────────────────────────────
+
+-- FUNCTION 3: Check if Author is Registered for a Conference
+-- Returns 1 if registered, 0 if not
+
+DELIMITER $$
+
+CREATE FUNCTION is_author_registered(aid INT, cid INT)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE result INT;
+    SELECT COUNT(*) INTO result
+    FROM Registration
+    WHERE author_id = aid
+    AND   conf_id   = cid;
+    IF result > 0 THEN
+        RETURN 1;
+    ELSE
+        RETURN 0;
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- Call Function 3
+SELECT is_author_registered(1, 501) AS is_registered;  -- should return 1
+SELECT is_author_registered(4, 501) AS is_registered;  -- should return 0
+
+
+-- ──────────────────────────────────────────────────────────────
+
+-- FUNCTION 4: Get Total Papers in a Domain
+-- Returns count of papers in a given domain
+
+DELIMITER $$
+
+CREATE FUNCTION get_papers_in_domain(did INT)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total INT;
+    SELECT COUNT(*) INTO total
+    FROM Research_Paper
+    WHERE domain_id = did;
+    RETURN total;
+END$$
+
+DELIMITER ;
+
+-- Call Function 4
+SELECT get_papers_in_domain(101) AS cardiology_papers;
+SELECT get_papers_in_domain(102) AS oncology_papers;
+
+
+-- ============================================================
+-- SECTION D: CURSORS
+-- ============================================================
+
+-- CURSOR 1: Loop through all Research Papers and print details
+-- Shows how cursors iterate row by row
+
+DELIMITER $$
+
+CREATE PROCEDURE print_all_papers()
+BEGIN
+    DECLARE done       INT DEFAULT 0;
+    DECLARE v_id       INT;
+    DECLARE v_title    VARCHAR(200);
+    DECLARE v_year     INT;
+    DECLARE v_domain   INT;
+
+    -- Declare the cursor
+    DECLARE paper_cursor CURSOR FOR
+        SELECT paper_id, title, publication_year, domain_id
+        FROM Research_Paper;
+
+    -- Handler for when no more rows
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+    -- Open cursor
+    OPEN paper_cursor;
+
+    -- Loop through each row
+    read_loop: LOOP
+        FETCH paper_cursor INTO v_id, v_title, v_year, v_domain;
+        IF done = 1 THEN
+            LEAVE read_loop;
+        END IF;
+        -- Print each paper
+        SELECT v_id AS paper_id, v_title AS title, v_year AS year, v_domain AS domain_id;
+    END LOOP;
+
+    -- Close cursor
+    CLOSE paper_cursor;
+END$$
+
+DELIMITER ;
+
+-- Call Cursor 1
+CALL print_all_papers();
+
+
+-- ──────────────────────────────────────────────────────────────
+
+-- CURSOR 2: Loop through all Submissions and show status summary
+-- Counts accepted vs under review using a cursor
+
+DELIMITER $$
+
+CREATE PROCEDURE submission_status_summary()
+BEGIN
+    DECLARE done         INT DEFAULT 0;
+    DECLARE v_status     VARCHAR(50);
+    DECLARE v_paper_id   INT;
+    DECLARE v_conf_id    INT;
+    DECLARE accepted_count   INT DEFAULT 0;
+    DECLARE review_count     INT DEFAULT 0;
+
+    -- Declare cursor
+    DECLARE sub_cursor CURSOR FOR
+        SELECT status, paper_id, conf_id
+        FROM Submission;
+
+    -- Handler
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+    OPEN sub_cursor;
+
+    status_loop: LOOP
+        FETCH sub_cursor INTO v_status, v_paper_id, v_conf_id;
+        IF done = 1 THEN
+            LEAVE status_loop;
+        END IF;
+
+        IF v_status = 'Accepted' THEN
+            SET accepted_count = accepted_count + 1;
+        ELSEIF v_status = 'Under Review' THEN
+            SET review_count = review_count + 1;
+        END IF;
+    END LOOP;
+
+    CLOSE sub_cursor;
+
+    -- Show final counts
+    SELECT accepted_count AS total_accepted,
+           review_count   AS total_under_review;
+END$$
+
+DELIMITER ;
+
+-- Call Cursor 2
+CALL submission_status_summary();
+
+
+-- ──────────────────────────────────────────────────────────────
+
+-- CURSOR 3: Loop through all Authors and show their paper count
+
+DELIMITER $$
+
+CREATE PROCEDURE author_paper_count()
+BEGIN
+    DECLARE done        INT DEFAULT 0;
+    DECLARE v_author_id INT;
+    DECLARE v_name      VARCHAR(100);
+    DECLARE v_count     INT;
+
+    -- Declare cursor
+    DECLARE author_cursor CURSOR FOR
+        SELECT a.author_id, a.name
+        FROM Author a;
+
+    -- Handler
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+    OPEN author_cursor;
+
+    author_loop: LOOP
+        FETCH author_cursor INTO v_author_id, v_name;
+        IF done = 1 THEN
+            LEAVE author_loop;
+        END IF;
+
+        -- Count papers for this author
+        SELECT COUNT(*) INTO v_count
+        FROM Author_Paper
+        WHERE author_id = v_author_id;
+
+        -- Display result
+        SELECT v_author_id AS author_id,
+               v_name      AS author_name,
+               v_count     AS total_papers;
+    END LOOP;
+
+    CLOSE author_cursor;
+END$$
+
+DELIMITER ;
+
+-- Call Cursor 3
+CALL author_paper_count();
+
+
+-- ============================================================
+-- END OF PL/SQL FILE
+-- All concepts covered:
+-- ✅ Triggers (3)
+-- ✅ Procedures (5)
+-- ✅ Functions (4)
+-- ✅ Cursors (3)
+-- ============================================================
