@@ -1,0 +1,140 @@
+-- ============================================================
+-- MEDICAL RESEARCH PUBLICATION & CONFERENCE MANAGEMENT SYSTEM
+-- STEP 3: SQL QUERIES
+-- ============================================================
+
+-- ──────────────────────────────────────────────────────────────
+-- BASIC SELECT QUERIES
+-- ──────────────────────────────────────────────────────────────
+
+-- Q1. Display all authors
+SELECT * FROM Author;
+
+-- Q2. Display all research papers
+SELECT * FROM Research_Paper;
+
+-- Q3. Display all reviewers
+SELECT * FROM Reviewer;
+
+-- Q4. Display all research domains
+SELECT * FROM Research_Domain;
+
+-- Q5. Display all reviews
+SELECT * FROM Review;
+
+-- Q6. Display all conferences
+SELECT * FROM Conference;
+
+-- Q7. Display all submissions
+SELECT * FROM Submission;
+
+-- Q8. Display all citations
+SELECT * FROM Citation;
+
+-- Q9. Display all journals
+SELECT * FROM Journal;
+
+-- ──────────────────────────────────────────────────────────────
+-- INTERMEDIATE QUERIES (with WHERE, JOIN, GROUP BY)
+-- ──────────────────────────────────────────────────────────────
+
+-- Q10. Get all accepted submissions
+SELECT * FROM Submission
+WHERE status = 'Accepted';
+
+-- Q11. Get conference schedule for each paper (JOIN)
+SELECT rp.title,
+       c.conf_name,
+       pp.presentation_date
+FROM Paper_Presentation pp
+JOIN Research_Paper rp ON rp.paper_id = pp.paper_id
+JOIN Conference c       ON c.conf_id  = pp.conf_id;
+
+-- Q12. Get presentation date of paper 201
+SELECT presentation_date
+FROM Paper_Presentation
+WHERE paper_id = 201;
+
+-- Q13. Show authors registered for each conference
+SELECT a.name, c.conf_name
+FROM Registration r
+JOIN Author     a ON a.author_id = r.author_id
+JOIN Conference c ON c.conf_id   = r.conf_id;
+
+-- Q14. Calculate total papers in each research domain
+SELECT rd.domain_name,
+       COUNT(rp.paper_id) AS total_papers
+FROM Research_Domain rd
+LEFT JOIN Research_Paper rp ON rd.domain_id = rp.domain_id
+GROUP BY rd.domain_name;
+
+-- Q15. List all papers presented in conference 501
+SELECT rp.title, c.conf_name
+FROM Paper_Presentation pp
+JOIN Research_Paper rp ON rp.paper_id = pp.paper_id
+JOIN Conference c       ON c.conf_id  = pp.conf_id
+WHERE c.conf_id = 501;
+
+-- Q16. Get total papers in Cardiology domain (domain_id = 101)
+SELECT COUNT(*) AS total_cardiology_papers
+FROM Research_Paper
+WHERE domain_id = 101;
+
+-- Q17. Conferences having more than 1 paper presented
+SELECT conf_id,
+       COUNT(*) AS total_presentations
+FROM Paper_Presentation
+GROUP BY conf_id
+HAVING COUNT(*) > 1;
+
+-- Q18. Papers having more than 1 citation
+SELECT cited_paper_id,
+       COUNT(*) AS citation_count
+FROM Citation
+GROUP BY cited_paper_id
+HAVING COUNT(*) > 1;
+
+-- Q19. Get all papers with their domain names (JOIN)
+SELECT rp.paper_id, rp.title, rp.publication_year, rd.domain_name
+FROM Research_Paper rp
+JOIN Research_Domain rd ON rp.domain_id = rd.domain_id;
+
+-- Q20. Get reviewer name and the paper they reviewed
+SELECT rv.name AS reviewer_name,
+       rp.title AS paper_title,
+       r.rating,
+       r.comments
+FROM Review r
+JOIN Reviewer      rv ON rv.reviewer_id = r.reviewer_id
+JOIN Research_Paper rp ON rp.paper_id   = r.paper_id;
+
+-- Q21. Find papers published after 2022
+SELECT * FROM Research_Paper
+WHERE publication_year > 2022;
+
+-- Q22. Find most cited paper
+SELECT cited_paper_id,
+       COUNT(*) AS times_cited
+FROM Citation
+GROUP BY cited_paper_id
+ORDER BY times_cited DESC;
+
+-- Q23. Get all papers submitted to conference 501
+SELECT rp.title, s.submission_date, s.status
+FROM Submission s
+JOIN Research_Paper rp ON rp.paper_id = s.paper_id
+WHERE s.conf_id = 501;
+
+-- Q24. Count submissions per conference
+SELECT c.conf_name, COUNT(s.submission_id) AS total_submissions
+FROM Conference c
+LEFT JOIN Submission s ON s.conf_id = c.conf_id
+GROUP BY c.conf_name;
+
+-- Q25. Get journals with impact factor above 4
+SELECT * FROM Journal
+WHERE impact_factor > 4.0;
+
+-- ──────────────────────────────────────────────────────────────
+-- END OF SQL QUERIES
+-- ──────────────────────────────────────────────────────────────
