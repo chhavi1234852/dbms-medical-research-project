@@ -1,0 +1,71 @@
+-- ============================================================
+-- MEDICAL RESEARCH PUBLICATION & CONFERENCE MANAGEMENT SYSTEM
+-- STEP 2: INSERT SAMPLE DATA INTO ALL TABLES
+-- ============================================================
+
+-- 1. Insert into Author
+INSERT INTO Author VALUES (1, 'Dr. Ananya Mehta',  'AIIMS Delhi',           'ananya@aiims.edu');
+INSERT INTO Author VALUES (2, 'Dr. Rohan Kapoor',  'PGI Chandigarh',        'rohan@pgi.in');
+INSERT INTO Author VALUES (3, 'Dr. Priya Sharma',  'CMC Vellore',           'priya@cmc.edu');
+INSERT INTO Author VALUES (4, 'Dr. Arjun Verma',   'Apollo Research Center','arjun@apollo.org');
+INSERT INTO Author VALUES (5, 'Dr. Neha Singh',    'Tata Memorial Hospital','neha@tmh.in');
+
+-- 2. Insert into Research_Domain
+INSERT INTO Research_Domain VALUES (101, 'Cardiology');
+INSERT INTO Research_Domain VALUES (102, 'Oncology');
+INSERT INTO Research_Domain VALUES (103, 'Neurology');
+INSERT INTO Research_Domain VALUES (104, 'Immunology');
+
+-- 3. Insert into Research_Paper
+INSERT INTO Research_Paper VALUES (201, 'AI in Heart Disease Detection',    2024, 101);
+INSERT INTO Research_Paper VALUES (202, 'Cancer Cell Imaging using ML',     2023, 102);
+INSERT INTO Research_Paper VALUES (203, 'Brain Tumor Prediction Models',    2024, 103);
+INSERT INTO Research_Paper VALUES (204, 'Vaccine Response Analysis',        2022, 104);
+
+-- 4. Insert into Author_Paper (who wrote which paper)
+INSERT INTO Author_Paper VALUES (1, 201);
+INSERT INTO Author_Paper VALUES (2, 201);
+INSERT INTO Author_Paper VALUES (3, 202);
+INSERT INTO Author_Paper VALUES (4, 203);
+INSERT INTO Author_Paper VALUES (5, 204);
+
+-- 5. Insert into Reviewer
+INSERT INTO Reviewer VALUES (301, 'Dr. Mehul Jain',   'Cardiology', 'mehul@medreview.org');
+INSERT INTO Reviewer VALUES (302, 'Dr. Kavita Rao',   'Oncology',   'kavita@medreview.org');
+INSERT INTO Reviewer VALUES (303, 'Dr. Sameer Iyer',  'Neurology',  'sameer@medreview.org');
+
+-- 6. Insert into Review
+INSERT INTO Review VALUES (401, 8, 'Strong methodology',        201, 301);
+INSERT INTO Review VALUES (402, 7, 'Needs more clinical data',  202, 302);
+INSERT INTO Review VALUES (403, 9, 'Excellent research work',   203, 303);
+
+-- 7. Insert into Conference
+INSERT INTO Conference VALUES (501, 'International Medical AI Conference', 'New Delhi', DATE '2025-03-10', DATE '2025-03-12');
+INSERT INTO Conference VALUES (502, 'Global Oncology Summit',              'Mumbai',    DATE '2025-04-15', DATE '2025-04-17');
+
+-- 8. Insert into Submission
+INSERT INTO Submission VALUES (601, DATE '2025-01-10', 'Accepted',      201, 501);
+INSERT INTO Submission VALUES (602, DATE '2025-01-12', 'Under Review',  202, 502);
+INSERT INTO Submission VALUES (603, DATE '2025-01-15', 'Accepted',      203, 501);
+
+-- 9. Insert into Paper_Presentation
+INSERT INTO Paper_Presentation VALUES (201, 501, DATE '2025-03-10');
+INSERT INTO Paper_Presentation VALUES (203, 501, DATE '2025-03-11');
+
+-- 10. Insert into Registration
+INSERT INTO Registration VALUES (701, DATE '2025-02-20', 1, 501);
+INSERT INTO Registration VALUES (702, DATE '2025-02-22', 2, 501);
+INSERT INTO Registration VALUES (703, DATE '2025-03-01', 3, 502);
+
+-- 11. Insert into Citation
+INSERT INTO Citation VALUES (202, 201, 2024);
+INSERT INTO Citation VALUES (203, 201, 2025);
+INSERT INTO Citation VALUES (204, 202, 2024);
+
+-- 12. Insert into Journal
+INSERT INTO Journal VALUES (801, 'Indian Journal of Medical Research', 4.25);
+INSERT INTO Journal VALUES (802, 'Global Health Science Journal',      3.80);
+
+-- ============================================================
+-- END OF DATA INSERTION
+-- ============================================================
